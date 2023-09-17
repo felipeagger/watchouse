@@ -10,12 +10,14 @@ The script is main.py and the envs is required:
 - USR
 - PASSWORD
 
-Personalize the check_trigger function to make request to your favorite service trigger a push. (My is Push-bullet)
+Personalize the send_alert function to make request to your favorite service trigger a push. (My is Push-bullet)
 
 # Dependencies
+- Python >= 3.9
 - OpenCV (https://opencv.org/)
 - YoloV5 Model (https://github.com/ultralytics/yolov5)
 - torch
 - torchvision
+- memoization (to make a memory cache and notify in 5 minute windows)
 
 The model used is the smallest model: models/yolov5n.pt

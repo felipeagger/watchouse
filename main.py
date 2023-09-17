@@ -2,12 +2,14 @@ import os
 import platform
 import time
 import sys
-
+import base64
 import cv2
 import torch
 
 from pathlib import Path
 import numpy as np
+import requests
+from memoization import cached
 from ultralytics.utils.plotting import Annotator, save_one_box, colors
 from models.common import DetectMultiBackend
 from utils.augmentations import letterbox
@@ -85,8 +87,42 @@ frames = max(int(vcap.get(cv2.CAP_PROP_FRAME_COUNT)), 0) or float('inf')  # infi
 
 def check_trigger(_frame, detected_classes):
     if detected_classes and int(detected_classes.get('person') or 0) > 0:
-        # make http request send push and frame -> _frame
-        return True
+        return send_alert(_frame)
+
+
+@cached(ttl=300, custom_key_maker=lambda param: "cache-key")
+def send_alert(_frame):
+    img_encoded = cv2.imencode('.jpg', _frame)[1]
+
+    upload_req = requests.post(url="https://api.pushbullet.com/v2/upload-request", headers={
+        'Content-Type': 'application/json',
+        'Access-Token': os.getenv('ACCESS_TOKEN')
+    }, json={"file_name": "frame.jpg", "file_type": "image/jpeg"})
+
+    if upload_req.ok:
+        body_resp = upload_req.json()
+        file_url = body_resp['file_url']
+        upload_url = body_resp['upload_url']
+
+        files = {'file': ('frame.jpg', img_encoded.tobytes(), 'image/jpeg')}
+        upload_resp = requests.post(upload_url, headers={'Access-Token': os.getenv('ACCESS_TOKEN')}, files=files)
+
+        if upload_resp.ok:
+            payload = {
+                "title": "Watchouse Alarm",
+                "body": "Person Detected",
+                "type": "link",
+                "url": file_url
+            }
+            resp = requests.post(url="https://api.pushbullet.com/v2/pushes", headers={
+                'Content-Type': 'application/json',
+                'Access-Token': os.getenv('ACCESS_TOKEN')
+
+            }, json=payload)
+            if not resp.ok:
+                print("Error on send Push")
+                print(resp.text)
+    return True
 
 
 def process_predictions(_pred, im0s, _seen, s):
