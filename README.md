@@ -11,6 +11,7 @@ The script is main.py and the envs is required:
 - PASSWORD
 
 Personalize the send_alert function to make request to your favorite service trigger a push. (My is Push-bullet)
+And in this case the ENV ACCESS_TOKEN is required.
 
 # Dependencies
 - Python >= 3.9
